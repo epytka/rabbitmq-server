@@ -17,7 +17,8 @@
          has_credentials/0,
          set_region/1,
          ensure_imdsv2_token_valid/0,
-         api_get_request/2]).
+         api_get_request/2,
+         api_get_request_with_retries/4]).
 
 %% gen-server exports
 -export([start_link/0,
@@ -543,10 +544,19 @@ ensure_credentials_valid() ->
 %% @end
 api_get_request(Service, Path) ->
   rabbit_log:debug("Invoking AWS request {Service: ~p; Path: ~p}...", [Service, Path]),
+  api_get_request_with_retries(Service, Path, ?SLEEP_TIME, ?MAX_RETRIES).
+
+
+api_get_request_with_retries(Service, Path, SleepTime, Retries) ->
   ensure_credentials_valid(),
   case get(Service, Path) of
     {ok, {_Headers, Payload}} -> rabbit_log:debug("AWS request: ~s~nResponse: ~p", [Path, Payload]),
-                                 {ok, Payload};
+      {ok, Payload};
     {error, {credentials, _}} -> {error, credentials};
-    {error, Message, _}       -> {error, Message}
+    {error, Message, _}       ->
+      case Retries of
+        0 -> {error, Message};
+        _ -> timer:sleep(SleepTime),
+             api_get_request_with_retries(Service, Path, SleepTime, Retries - 1)
+      end
   end.
