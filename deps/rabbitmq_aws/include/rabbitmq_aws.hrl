@@ -45,7 +45,6 @@
 
 -define(LINEAR_BACK_OFF_MILLIS, 1000).
 -define(MAX_RETRIES, 30).
--define(SLEEP_TIME, 1000).
 
 -type access_key() :: nonempty_string().
 -type secret_access_key() :: nonempty_string().

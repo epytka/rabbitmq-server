@@ -472,7 +472,7 @@ api_get_request_test_() ->
     ]
   }.
 
-api_get_request_with_retries_() ->
+api_get_request_with_retries_test_() ->
   {
     foreach,
     fun () ->
@@ -510,12 +510,20 @@ api_get_request_with_retries_() ->
       },
       {"AWS service API request failed credentials - should retry",
         fun() ->
-          meck:sequence(rabbitmq_aws_config, credentials, 0, {error, undefined}),
+          State = #state{access_key = "ExpiredKey",
+          secret_access_key = "ExpiredAccessKey",
+          region = "us-east-1",
+          expiration = {{3016, 4, 1}, {12, 0, 0}}},
+          meck:expect(httpc, request, 4, meck:seq([
+            {error, undefined},
+            {ok, {{"HTTP/1.0", 200, "OK"}, [{"content-type", "application/json"}], "{\"data\": \"value\"}"}}])),
           {ok, Pid} = rabbitmq_aws:start_link(),
           rabbitmq_aws:set_region("us-east-1"),
-          Result = rabbitmq_aws:api_get_request_with_retries("AWS", "API", 1, 2),
+          rabbitmq_aws:set_credentials(State),
+          Result = rabbitmq_aws:api_get_request_with_retries("AWS", "API", 1, 1),
           ok = gen_server:stop(Pid),
-          ?assertEqual({error, credentials}, Result)
+          ?assertEqual({ok, [{"data","value"}]}, Result),
+          meck:validate(httpc)
         end
       },
       {"AWS service API request failed - API error",
@@ -536,7 +544,6 @@ api_get_request_with_retries_() ->
       }
     ]
   }.
-
 
 ensure_credentials_valid_test_() ->
   {

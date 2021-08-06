@@ -544,8 +544,7 @@ ensure_credentials_valid() ->
 %% @end
 api_get_request(Service, Path) ->
   rabbit_log:debug("Invoking AWS request {Service: ~p; Path: ~p}...", [Service, Path]),
-  api_get_request_with_retries(Service, Path, ?SLEEP_TIME, ?MAX_RETRIES).
-
+  api_get_request_with_retries(Service, Path, ?LINEAR_BACK_OFF_MILLIS, ?MAX_RETRIES).
 
 api_get_request_with_retries(Service, Path, SleepTime, Retries) ->
   ensure_credentials_valid(),
