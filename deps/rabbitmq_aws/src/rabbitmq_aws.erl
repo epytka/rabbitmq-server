@@ -555,7 +555,8 @@ api_get_request_with_retries(Service, Path, SleepTime, Retries) ->
     {error, Message, _}       ->
       case Retries of
         0 -> {error, Message};
-        _ -> timer:sleep(SleepTime),
+        _ -> rabbit_log:warning("Encountered error when calling api ~p, retries remaining ~p", [Message, Retries]),
+             timer:sleep(SleepTime),
              api_get_request_with_retries(Service, Path, SleepTime, Retries - 1)
       end
   end.
